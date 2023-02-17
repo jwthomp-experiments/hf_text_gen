@@ -6,7 +6,7 @@ def elapsed(text):
     t = time();
     print(f"time: {t - start} - {text}")
 
-from transformers import set_seed, GenerationConfig, GPT2LMHeadModel, GPT2Tokenizer, pipeline
+from transformers import set_seed, AutoTokenizer, AutoModelForCausalLM, GenerationConfig, GPT2LMHeadModel, GPT2Tokenizer, pipeline
 import torch
 
 elapsed("imported dependencies")
@@ -15,39 +15,47 @@ elapsed("imported dependencies")
 SEED = 34
 set_seed(SEED)
 
+model_name = "EleutherAI/gpt-neo-2.7B"
+
+
 # get large GPT2 tokenizer and GPT2 model
-tokenizer = GPT2Tokenizer.from_pretrained("gpt2-large", device=torch.device("mps"))
+tokenizer = AutoTokenizer.from_pretrained(model_name, device=torch.device("mps"))
 
 elapsed("Loaded Tokenizer")
 
-model = GPT2LMHeadModel.from_pretrained("gpt2-large")
+
+model = AutoModelForCausalLM.from_pretrained(model_name)
 
 elapsed("Loaded Model")
 
 #model_config.top_k=16
 
 # set pad_token_id to eos_token_id because GPT2 does not have a EOS token
-generation_config = GenerationConfig.from_pretrained("gpt2")
+generation_config = GenerationConfig.from_model_config(model.config)
 generation_config.pad_token_id = generation_config.eos_token_id
 generation_config.max_new_tokens = 128
-generation_config.tok_k = 16
+#generation_config.tok_k = 16
 generation_config.early_stopping = True
 generation_config.no_repeat_ngram_size = 1
 generation_config.return_dict_in_generate = True
+generation_config.top_p = 0.9
+generation_config.temperature = 0.7
 
 elapsed("generated config")
 
 
 
 sentence = [
-    'You said: "Nice to meet you. What\'s your name?"\n'
-    'I said: "My name is Pete."\n'
-    'You said: "That\'s an interesting name. How old are you?"\n'
-    'I said: "I\'m 40 years old."\n'
-    'You said: "Can you tell me something about yourself?"\n'
-    'I said: "Of course! I like playing video games and eating cake. "\n'
-    'You said: "I like sweet stuff too. What are your plans for tomorrow?"\n'
-    'I said: '
+    "I am a mean friend who is always sarcastic and rude.\n"
+    "\n"
+    'You: "Nice to meet you. What\'s your name?"\n'
+    'Me: "My name is Pete."\n'
+    'You: "That\'s an interesting name. How old are you?"\n'
+    'Me: "I\'m 40 years old."\n'
+    'You: "Can you tell me something about yourself?"\n'
+    'Me: "Of course! I like playing video games and eating cake. "\n'
+    'You: "I like sweet stuff too. What are your plans for tomorrow?"\n'
+    'Me: '
     ]
 input_ids = tokenizer(sentence, return_tensors='pt').input_ids
 
